@@ -3,11 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>io.github.sullis</groupId>
-  <artifactId>localstack-playground</artifactId>
+  <artifactId>testcontainers-playground</artifactId>
   <packaging>jar</packaging>
-  <name>localstack-playground</name>
+  <name>testcontainers-playground</name>
   <version>0.0.1-SNAPSHOT</version>
-  <description>localstack-playground</description>
+  <description>testcontainers-playground</description>
   <licenses>
     <license>
       <name>Apache License 2.0</name>

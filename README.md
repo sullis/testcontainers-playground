@@ -1,4 +1,4 @@
-# localstack-playground
+# testcontainers-playground
 
-localstack experiments + test suite
+testcontainers experiments + test suite
 

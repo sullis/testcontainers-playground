@@ -50,6 +50,8 @@ public class LocalstackTest {
       AwsBasicCredentials.create(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
   );
 
+  private static final Region REGION = Region.of(LOCALSTACK.getRegion());
+
   @BeforeAll
   public static void startLocalstack() {
     LOCALSTACK.start();
@@ -81,7 +83,7 @@ public class LocalstackTest {
         .httpClient(sdkHttpClient)
         .endpointOverride(LOCALSTACK.getEndpoint())
         .credentialsProvider(CREDENTIALS_PROVIDER)
-        .region(Region.of(LOCALSTACK.getRegion()))
+        .region(REGION)
         .build();
     DynamoDbAsyncWaiter dbWaiter = dbClient.waiter();
     CreateTableRequest request = CreateTableRequest.builder()

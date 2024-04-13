@@ -13,12 +13,11 @@ import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.core.internal.http.loader.DefaultSdkHttpClientBuilder;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
-import software.amazon.awssdk.http.SdkHttpClient;
-import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
@@ -35,7 +34,7 @@ import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
-import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
+import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -65,24 +64,24 @@ public class LocalstackTest {
 
   static Stream<Arguments> params() {
     return Stream.of(
-        arguments("apacheHttpClient", ApacheHttpClient.builder().build())
+        arguments("nettyHttpClient", NettyNioAsyncHttpClient.builder().build())
     );
   }
 
   @ParameterizedTest
   @MethodSource("params")
-  public void dynamodDb(final String sdkHttpClientName, final SdkHttpClient sdkHttpClient) {
+  public void dynamodDb(final String sdkHttpClientName, final SdkAsyncHttpClient sdkHttpClient) throws Throwable {
     final String key = "key-" + UUID.randomUUID().toString();
     final String keyVal = "keyVal-" + UUID.randomUUID().toString();
     final String tableName = "table-" + UUID.randomUUID().toString();
 
-    DynamoDbClient dbClient = DynamoDbClient.builder()
+    DynamoDbAsyncClient dbClient = DynamoDbAsyncClient.builder()
         .httpClient(sdkHttpClient)
         .endpointOverride(LOCALSTACK.getEndpoint())
         .credentialsProvider(CREDENTIALS_PROVIDER)
         .region(Region.of(LOCALSTACK.getRegion()))
         .build();
-    DynamoDbWaiter dbWaiter = dbClient.waiter();
+    DynamoDbAsyncWaiter dbWaiter = dbClient.waiter();
     CreateTableRequest request = CreateTableRequest.builder()
         .attributeDefinitions(AttributeDefinition.builder()
             .attributeName(key)
@@ -98,12 +97,12 @@ public class LocalstackTest {
             .build())
         .tableName(tableName)
         .build();
-    CreateTableResponse response = dbClient.createTable(request);
+    CreateTableResponse response = dbClient.createTable(request).get();
     assertThat(response.tableDescription().tableName()).isEqualTo(tableName);
     DescribeTableRequest tableRequest = DescribeTableRequest.builder()
         .tableName(tableName)
         .build();
-    WaiterResponse<DescribeTableResponse> waiterResponse =  dbWaiter.waitUntilTableExists(tableRequest);
+    WaiterResponse<DescribeTableResponse> waiterResponse =  dbWaiter.waitUntilTableExists(tableRequest).get();
     DescribeTableResponse describeTableResponse = waiterResponse.matched().response().get();
     assertThat(describeTableResponse).isNotNull();
     assertThat(describeTableResponse.sdkHttpResponse().isSuccessful()).isTrue();
@@ -119,7 +118,7 @@ public class LocalstackTest {
         .tableName(tableName)
         .item(putItemValues)
         .build();
-    PutItemResponse putItemResponse = dbClient.putItem(putItemRequest);
+    PutItemResponse putItemResponse = dbClient.putItem(putItemRequest).get();
     assertThat(putItemResponse.sdkHttpResponse().isSuccessful()).isTrue();
 
     HashMap<String, AttributeValue> getItemValues = new HashMap<>();
@@ -129,14 +128,14 @@ public class LocalstackTest {
         .key(getItemValues)
         .consistentRead(true)
         .build();
-    GetItemResponse getItemResponse = dbClient.getItem(getItemRequest);
+    GetItemResponse getItemResponse = dbClient.getItem(getItemRequest).get();
     assertThat(getItemResponse.sdkHttpResponse().isSuccessful()).isTrue();
     assertThat(getItemResponse.item().keySet()).containsExactlyInAnyOrder("country", "city", key);
 
     DeleteTableRequest deleteTableRequest = DeleteTableRequest.builder()
         .tableName(tableName)
         .build();
-    DeleteTableResponse deleteTableResponse = dbClient.deleteTable(deleteTableRequest);
+    DeleteTableResponse deleteTableResponse = dbClient.deleteTable(deleteTableRequest).get();
     assertThat(deleteTableResponse.sdkHttpResponse().isSuccessful()).isTrue();
 
   }

@@ -16,6 +16,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.internal.http.loader.DefaultSdkHttpClientBuilder;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.http.SdkHttpClient;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
@@ -64,7 +65,7 @@ public class LocalstackTest {
 
   static Stream<Arguments> params() {
     return Stream.of(
-        arguments("default", new DefaultSdkHttpClientBuilder().build())
+        arguments("apacheHttpClient", ApacheHttpClient.builder().build())
     );
   }
 

@@ -15,6 +15,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
+import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
@@ -64,7 +65,8 @@ public class LocalstackTest {
 
   static Stream<Arguments> params() {
     return Stream.of(
-        arguments("nettyHttpClient", NettyNioAsyncHttpClient.builder().build())
+        arguments("nettyHttpClient", NettyNioAsyncHttpClient.builder().build()),
+        arguments("crtHttpClient", AwsCrtAsyncHttpClient.builder().build())
     );
   }
 

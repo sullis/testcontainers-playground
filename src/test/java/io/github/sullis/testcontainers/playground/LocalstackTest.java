@@ -63,7 +63,7 @@ public class LocalstackTest {
   }
 
 
-  static Stream<Arguments> params() {
+  static Stream<Arguments> awsSdkHttpClients() {
     return Stream.of(
         arguments("nettyHttpClient", NettyNioAsyncHttpClient.builder().build()),
         arguments("crtHttpClient", AwsCrtAsyncHttpClient.builder().build())
@@ -71,7 +71,7 @@ public class LocalstackTest {
   }
 
   @ParameterizedTest
-  @MethodSource("params")
+  @MethodSource("awsSdkHttpClients")
   public void dynamodDb(final String sdkHttpClientName, final SdkAsyncHttpClient sdkHttpClient) throws Throwable {
     final String key = "key-" + UUID.randomUUID().toString();
     final String keyVal = "keyVal-" + UUID.randomUUID().toString();

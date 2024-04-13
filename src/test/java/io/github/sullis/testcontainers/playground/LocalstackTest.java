@@ -79,12 +79,8 @@ public class LocalstackTest {
     final String keyVal = "keyVal-" + UUID.randomUUID().toString();
     final String tableName = "table-" + UUID.randomUUID().toString();
 
-    DynamoDbAsyncClient dbClient = DynamoDbAsyncClient.builder()
-        .httpClient(sdkHttpClient)
-        .endpointOverride(LOCALSTACK.getEndpoint())
-        .credentialsProvider(CREDENTIALS_PROVIDER)
-        .region(REGION)
-        .build();
+    final DynamoDbAsyncClient dbClient = createDynamoDbClient(sdkHttpClient);
+
     DynamoDbAsyncWaiter dbWaiter = dbClient.waiter();
     CreateTableRequest request = CreateTableRequest.builder()
         .attributeDefinitions(AttributeDefinition.builder()
@@ -142,5 +138,14 @@ public class LocalstackTest {
     DeleteTableResponse deleteTableResponse = dbClient.deleteTable(deleteTableRequest).get();
     assertThat(deleteTableResponse.sdkHttpResponse().isSuccessful()).isTrue();
 
+  }
+
+  private DynamoDbAsyncClient createDynamoDbClient(final SdkAsyncHttpClient sdkHttpClient) {
+    return  DynamoDbAsyncClient.builder()
+        .httpClient(sdkHttpClient)
+        .endpointOverride(LOCALSTACK.getEndpoint())
+        .credentialsProvider(CREDENTIALS_PROVIDER)
+        .region(REGION)
+        .build();
   }
 }

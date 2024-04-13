@@ -2,15 +2,20 @@ package io.github.sullis.testcontainers.playground;
 
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.internal.http.loader.DefaultSdkHttpClientBuilder;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
+import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
@@ -32,6 +37,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 
 public class LocalstackTest {
@@ -55,13 +61,22 @@ public class LocalstackTest {
     }
   }
 
-  @Test
-  public void dynamodDb() {
+
+  static Stream<Arguments> params() {
+    return Stream.of(
+        arguments("default", new DefaultSdkHttpClientBuilder().build())
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("params")
+  public void dynamodDb(final String sdkHttpClientName, final SdkHttpClient sdkHttpClient) {
     final String key = "key-" + UUID.randomUUID().toString();
     final String keyVal = "keyVal-" + UUID.randomUUID().toString();
     final String tableName = "table-" + UUID.randomUUID().toString();
 
     DynamoDbClient dbClient = DynamoDbClient.builder()
+        .httpClient(sdkHttpClient)
         .endpointOverride(LOCALSTACK.getEndpoint())
         .credentialsProvider(CREDENTIALS_PROVIDER)
         .region(Region.of(LOCALSTACK.getRegion()))

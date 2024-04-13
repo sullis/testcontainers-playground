@@ -115,7 +115,7 @@ public class LocalstackTest {
         .build();
     GetItemResponse getItemResponse = dbClient.getItem(getItemRequest);
     assertThat(getItemResponse.sdkHttpResponse().isSuccessful()).isTrue();
-    assertThat(getItemResponse.item().keySet()).containsExactly("country", "city", key);
+    assertThat(getItemResponse.item().keySet()).containsExactlyInAnyOrder("country", "city", key);
 
     DeleteTableRequest deleteTableRequest = DeleteTableRequest.builder()
         .tableName(tableName)

@@ -36,7 +36,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class LocalstackTest {
 
-  private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"));
+  private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
+      .withServices(LocalStackContainer.Service.DYNAMODB);
+
   private static final AwsCredentialsProvider CREDENTIALS_PROVIDER = StaticCredentialsProvider.create(
       AwsBasicCredentials.create(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
   );

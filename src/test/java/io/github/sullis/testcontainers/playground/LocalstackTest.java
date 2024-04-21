@@ -17,6 +17,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.core.client.builder.SdkSyncClientBuilder;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.http.SdkHttpClient;
@@ -119,7 +120,7 @@ public class LocalstackTest {
     WaiterResponse<DescribeTableResponse> waiterResponse =  dbWaiter.waitUntilTableExists(tableRequest).get();
     DescribeTableResponse describeTableResponse = waiterResponse.matched().response().get();
     assertThat(describeTableResponse).isNotNull();
-    assertThat(describeTableResponse.sdkHttpResponse().isSuccessful()).isTrue();
+    assertSuccess(describeTableResponse);
     assertThat(describeTableResponse.responseMetadata().requestId()).isNotNull();
     assertThat(describeTableResponse.table().tableName()).isEqualTo(tableName);
 
@@ -133,7 +134,7 @@ public class LocalstackTest {
         .item(putItemValues)
         .build();
     PutItemResponse putItemResponse = dbClient.putItem(putItemRequest).get();
-    assertThat(putItemResponse.sdkHttpResponse().isSuccessful()).isTrue();
+    assertSuccess(putItemResponse);
 
     HashMap<String, AttributeValue> getItemValues = new HashMap<>();
     getItemValues.put(key, AttributeValue.builder().s(keyVal).build());
@@ -143,15 +144,14 @@ public class LocalstackTest {
         .consistentRead(true)
         .build();
     GetItemResponse getItemResponse = dbClient.getItem(getItemRequest).get();
-    assertThat(getItemResponse.sdkHttpResponse().isSuccessful()).isTrue();
+    assertSuccess(getItemResponse);
     assertThat(getItemResponse.item().keySet()).containsExactlyInAnyOrder("country", "city", key);
 
     DeleteTableRequest deleteTableRequest = DeleteTableRequest.builder()
         .tableName(tableName)
         .build();
     DeleteTableResponse deleteTableResponse = dbClient.deleteTable(deleteTableRequest).get();
-    assertThat(deleteTableResponse.sdkHttpResponse().isSuccessful()).isTrue();
-
+    assertSuccess(deleteTableResponse);
   }
 
   @Test
@@ -163,7 +163,7 @@ public class LocalstackTest {
     try (S3Client s3Client = createS3Client()) {
       CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(bucket).build();
       CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest);
-      assertThat(createBucketResponse.sdkHttpResponse().isSuccessful()).isTrue();
+      assertSuccess(createBucketResponse);
     }
   }
 
@@ -175,7 +175,7 @@ public class LocalstackTest {
       CreateStreamResponse createStreamResponse = kinesisClient.createStream(builder -> {
         builder.streamName(streamName).shardCount(10);
       });
-      assertThat(createStreamResponse.sdkHttpResponse().isSuccessful()).isTrue();
+      assertSuccess(createStreamResponse);
       kinesisClient.waiter().waitUntilStreamExists(builder -> {
         builder.streamName(streamName).build();
       });
@@ -184,7 +184,7 @@ public class LocalstackTest {
             .data(SdkBytes.fromString(payload, StandardCharsets.UTF_8))
             .partitionKey("foobar");
       });
-      assertThat(putRecordResponse.sdkHttpResponse().isSuccessful()).isTrue();
+      assertSuccess(putRecordResponse);
     }
   }
 
@@ -214,5 +214,9 @@ public class LocalstackTest {
     return builder.endpointOverride(LOCALSTACK.getEndpoint())
         .credentialsProvider(CREDENTIALS_PROVIDER)
         .region(REGION);
+  }
+
+  private static void assertSuccess(final SdkResponse sdkResponse) {
+    assertThat(sdkResponse.sdkHttpResponse().isSuccessful()).isTrue();
   }
 }

@@ -61,11 +61,11 @@ public class LocalstackTest {
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
       .withServices(LocalStackContainer.Service.DYNAMODB, LocalStackContainer.Service.S3, LocalStackContainer.Service.KINESIS);
 
-  private static final AwsCredentialsProvider CREDENTIALS_PROVIDER = StaticCredentialsProvider.create(
+  private static final AwsCredentialsProvider AWS_CREDENTIALS_PROVIDER = StaticCredentialsProvider.create(
       AwsBasicCredentials.create(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
   );
 
-  private static final Region REGION = Region.of(LOCALSTACK.getRegion());
+  private static final Region AWS_REGION = Region.of(LOCALSTACK.getRegion());
 
   @BeforeAll
   public static void startLocalstack() {
@@ -192,8 +192,8 @@ public class LocalstackTest {
     return  DynamoDbAsyncClient.builder()
         .httpClient(sdkHttpClient)
         .endpointOverride(LOCALSTACK.getEndpoint())
-        .credentialsProvider(CREDENTIALS_PROVIDER)
-        .region(REGION)
+        .credentialsProvider(AWS_CREDENTIALS_PROVIDER)
+        .region(AWS_REGION)
         .build();
   }
 
@@ -212,8 +212,8 @@ public class LocalstackTest {
       throw new IllegalStateException("unexpected AwsClientBuilder");
     }
     return builder.endpointOverride(LOCALSTACK.getEndpoint())
-        .credentialsProvider(CREDENTIALS_PROVIDER)
-        .region(REGION);
+        .credentialsProvider(AWS_CREDENTIALS_PROVIDER)
+        .region(AWS_REGION);
   }
 
   private static void assertSuccess(final SdkResponse sdkResponse) {

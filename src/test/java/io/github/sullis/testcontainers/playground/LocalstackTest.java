@@ -1,10 +1,12 @@
 package io.github.sullis.testcontainers.playground;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -13,12 +15,18 @@ import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
+import software.amazon.awssdk.core.client.builder.SdkSyncClientBuilder;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
+import software.amazon.awssdk.http.SdkHttpClient;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
@@ -36,15 +44,18 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 
 public class LocalstackTest {
+  private static final SdkHttpClient.Builder<?> AWS_SDK_HTTP_CLIENT_BUILDER = ApacheHttpClient.builder();
 
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
-      .withServices(LocalStackContainer.Service.DYNAMODB);
+      .withServices(LocalStackContainer.Service.DYNAMODB, LocalStackContainer.Service.S3);
 
   private static final AwsCredentialsProvider CREDENTIALS_PROVIDER = StaticCredentialsProvider.create(
       AwsBasicCredentials.create(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
@@ -140,6 +151,19 @@ public class LocalstackTest {
 
   }
 
+  @Test
+  public void s3() throws Exception {
+    final byte[] payload = "payload123".getBytes(StandardCharsets.UTF_8);
+    final String bucket = "bucket-" + UUID.randomUUID();
+    final String pathToFile = "/path/" + UUID.randomUUID();
+    final String location = "s3://" + bucket + pathToFile;
+    try (S3Client s3Client = createS3Client()) {
+      CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(bucket).build();
+      CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest);
+      assertThat(createBucketResponse.sdkHttpResponse().isSuccessful()).isTrue();
+    }
+  }
+
   private DynamoDbAsyncClient createDynamoDbClient(final SdkAsyncHttpClient sdkHttpClient) {
     return  DynamoDbAsyncClient.builder()
         .httpClient(sdkHttpClient)
@@ -147,5 +171,20 @@ public class LocalstackTest {
         .credentialsProvider(CREDENTIALS_PROVIDER)
         .region(REGION)
         .build();
+  }
+
+  private S3Client createS3Client() {
+    return (S3Client) configure(S3Client.builder()).build();
+  }
+
+  private AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {
+    if (builder instanceof SdkSyncClientBuilder) {
+      ((SdkSyncClientBuilder<?, ?>) builder).httpClient(AWS_SDK_HTTP_CLIENT_BUILDER.build());
+    } else {
+      throw new IllegalStateException("unexpected AwsClientBuilder");
+    }
+    return builder.endpointOverride(LOCALSTACK.getEndpoint())
+        .credentialsProvider(CREDENTIALS_PROVIDER)
+        .region(REGION);
   }
 }

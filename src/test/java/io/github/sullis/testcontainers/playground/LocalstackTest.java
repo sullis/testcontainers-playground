@@ -16,17 +16,20 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
+import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.client.builder.SdkSyncClientBuilder;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.kinesis.model.CreateStreamResponse;
+import software.amazon.awssdk.services.kinesis.model.PutRecordResponse;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
@@ -55,7 +58,7 @@ public class LocalstackTest {
   private static final SdkHttpClient.Builder<?> AWS_SDK_HTTP_CLIENT_BUILDER = ApacheHttpClient.builder();
 
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
-      .withServices(LocalStackContainer.Service.DYNAMODB, LocalStackContainer.Service.S3);
+      .withServices(LocalStackContainer.Service.DYNAMODB, LocalStackContainer.Service.S3, LocalStackContainer.Service.KINESIS);
 
   private static final AwsCredentialsProvider CREDENTIALS_PROVIDER = StaticCredentialsProvider.create(
       AwsBasicCredentials.create(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
@@ -164,6 +167,27 @@ public class LocalstackTest {
     }
   }
 
+  @Test
+  public void kinesis() throws Exception {
+    final String streamName = UUID.randomUUID().toString();
+    final String payload = "{}";
+    try (KinesisClient kinesisClient = createKinesisClient()) {
+      CreateStreamResponse createStreamResponse = kinesisClient.createStream(builder -> {
+        builder.streamName(streamName).shardCount(10);
+      });
+      assertThat(createStreamResponse.sdkHttpResponse().isSuccessful()).isTrue();
+      kinesisClient.waiter().waitUntilStreamExists(builder -> {
+        builder.streamName(streamName).build();
+      });
+      PutRecordResponse putRecordResponse = kinesisClient.putRecord(builder -> {
+        builder.streamName(streamName)
+            .data(SdkBytes.fromString(payload, StandardCharsets.UTF_8))
+            .partitionKey("foobar");
+      });
+      assertThat(putRecordResponse.sdkHttpResponse().isSuccessful()).isTrue();
+    }
+  }
+
   private DynamoDbAsyncClient createDynamoDbClient(final SdkAsyncHttpClient sdkHttpClient) {
     return  DynamoDbAsyncClient.builder()
         .httpClient(sdkHttpClient)
@@ -175,6 +199,10 @@ public class LocalstackTest {
 
   private S3Client createS3Client() {
     return (S3Client) configure(S3Client.builder()).build();
+  }
+
+  private KinesisClient createKinesisClient() {
+    return (KinesisClient) configure(KinesisClient.builder()).build();
   }
 
   private AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {

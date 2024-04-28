@@ -55,8 +55,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 
 public class LocalstackTest {
-  private static final List<SdkHttpClient.Builder<?>> SYNC_HTTP_CLIENT_BUILDER_LIST= List.of(
-      ApacheHttpClient.builder());
   private static final List<SdkAsyncHttpClient.Builder<?>> ASYNC_HTTP_CLIENT_BUILDER_LIST = List.of(
       NettyNioAsyncHttpClient.builder(),
       AwsCrtAsyncHttpClient.builder());

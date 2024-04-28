@@ -2,14 +2,11 @@ package io.github.sullis.testcontainers.playground;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,10 +17,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
-import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.SdkResponse;
-import software.amazon.awssdk.core.waiters.WaiterResponse;
-import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
@@ -37,8 +31,6 @@ import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
-
 
 public class S3Test {
   private static final List<SdkAsyncHttpClient.Builder<?>> ASYNC_HTTP_CLIENT_BUILDER_LIST = List.of(
@@ -72,13 +64,6 @@ public class S3Test {
     if (MINIO_CONTAINER != null) {
       MINIO_CONTAINER.stop();
     }
-  }
-
-  static Stream<Arguments> awsSdkAsyncHttpClients() {
-    return Stream.of(
-        arguments("nettyAsyncHttpClient", NettyNioAsyncHttpClient.builder().build()),
-        arguments("crtAsyncHttpClient", AwsCrtAsyncHttpClient.builder().build())
-    );
   }
 
   public static List<S3AsyncClientInfo> s3AsyncClients() {

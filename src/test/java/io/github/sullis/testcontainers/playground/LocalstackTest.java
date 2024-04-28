@@ -8,7 +8,6 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -23,7 +22,7 @@ import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
-import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 import software.amazon.awssdk.services.kinesis.model.CreateStreamResponse;
 import software.amazon.awssdk.services.kinesis.model.PutRecordResponse;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -194,23 +193,24 @@ public class LocalstackTest {
     assertSuccess(createMultipartUploadResponse);
   }
 
-  @Test
-  public void kinesis() throws Exception {
+  @ParameterizedTest
+  @MethodSource("awsSdkHttpClients")
+  public void kinesis(final String sdkHttpClientName, final SdkAsyncHttpClient sdkHttpClient) throws Exception {
     final String streamName = UUID.randomUUID().toString();
     final String payload = "{}";
-    try (KinesisClient kinesisClient = createKinesisClient()) {
+    try (KinesisAsyncClient kinesisClient = createKinesisClient(sdkHttpClient)) {
       CreateStreamResponse createStreamResponse = kinesisClient.createStream(builder -> {
         builder.streamName(streamName).shardCount(10);
-      });
+      }).get();
       assertSuccess(createStreamResponse);
       kinesisClient.waiter().waitUntilStreamExists(builder -> {
         builder.streamName(streamName).build();
-      });
+      }).get();
       PutRecordResponse putRecordResponse = kinesisClient.putRecord(builder -> {
         builder.streamName(streamName)
             .data(SdkBytes.fromString(payload, StandardCharsets.UTF_8))
             .partitionKey("foobar");
-      });
+      }).get();
       assertSuccess(putRecordResponse);
     }
   }
@@ -219,8 +219,8 @@ public class LocalstackTest {
     return (DynamoDbAsyncClient) configure(DynamoDbAsyncClient.builder().httpClient(sdkHttpClient)).build();
   }
 
-  private KinesisClient createKinesisClient() {
-    return (KinesisClient) configure(KinesisClient.builder()).build();
+  private KinesisAsyncClient createKinesisClient(final SdkAsyncHttpClient sdkHttpClient) {
+    return (KinesisAsyncClient) configure(KinesisAsyncClient.builder().httpClient(sdkHttpClient)).build();
   }
 
   private static S3CrtAsyncClientBuilder configure(S3CrtAsyncClientBuilder builder) {

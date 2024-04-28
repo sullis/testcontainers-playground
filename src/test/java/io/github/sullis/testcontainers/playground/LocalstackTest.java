@@ -20,8 +20,6 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.SdkResponse;
-import software.amazon.awssdk.core.client.builder.SdkAsyncClientBuilder;
-import software.amazon.awssdk.core.client.builder.SdkSyncClientBuilder;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
@@ -218,12 +216,7 @@ public class LocalstackTest {
   }
 
   private DynamoDbAsyncClient createDynamoDbClient(final SdkAsyncHttpClient sdkHttpClient) {
-    return  DynamoDbAsyncClient.builder()
-        .httpClient(sdkHttpClient)
-        .endpointOverride(LOCALSTACK.getEndpoint())
-        .credentialsProvider(AWS_CREDENTIALS_PROVIDER)
-        .region(AWS_REGION)
-        .build();
+    return (DynamoDbAsyncClient) configure(DynamoDbAsyncClient.builder().httpClient(sdkHttpClient)).build();
   }
 
   private KinesisClient createKinesisClient() {

@@ -227,10 +227,6 @@ public class LocalstackTest {
         .build();
   }
 
-  private S3Client createS3Client() {
-    return (S3Client) configure(S3Client.builder()).build();
-  }
-
   private KinesisClient createKinesisClient() {
     return (KinesisClient) configure(KinesisClient.builder()).build();
   }

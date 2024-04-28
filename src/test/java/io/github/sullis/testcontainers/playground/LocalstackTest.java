@@ -1,7 +1,6 @@
 package io.github.sullis.testcontainers.playground;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -21,7 +20,6 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.SdkResponse;
-import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
@@ -51,17 +49,6 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
-import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
-import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
-import software.amazon.awssdk.services.s3.model.CompletedPart;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
-import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
-import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
-import software.amazon.awssdk.services.s3.model.UploadPartRequest;
-import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -171,61 +158,6 @@ public class LocalstackTest {
     assertSuccess(deleteTableResponse);
   }
 
-  public static List<S3AsyncClientInfo> s3AsyncClients() {
-    List<S3AsyncClientInfo> result = new ArrayList<>();
-    ASYNC_HTTP_CLIENT_BUILDER_LIST.forEach(httpClientBuilder -> {
-      var httpClient = httpClientBuilder.build();
-      S3AsyncClient s3Client = (S3AsyncClient) configure(S3AsyncClient.builder().httpClient(httpClient)).build();
-      result.add(new S3AsyncClientInfo(httpClient.clientName(), s3Client));
-    });
-
-    // S3 crtBuilder
-    result.add(new S3AsyncClientInfo("crtBuilder", configure(S3AsyncClient.crtBuilder()).build()));
-
-    return result;
-  }
-
-  @ParameterizedTest
-  @MethodSource("s3AsyncClients")
-  public void s3(S3AsyncClientInfo s3ClientInfo) throws Exception {
-    final S3AsyncClient s3Client = s3ClientInfo.client;
-    final byte[] payload = "payload123".getBytes(StandardCharsets.UTF_8);
-    final String bucket = "bucket-" + UUID.randomUUID();
-    final String pathToFile = "/path/" + UUID.randomUUID();
-    final String location = "s3://" + bucket + pathToFile;
-    CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(bucket).build();
-    CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest).get();
-    assertSuccess(createBucketResponse);
-
-    final String key = "key-" + UUID.randomUUID();
-    CreateMultipartUploadRequest createMultipartUploadRequest = CreateMultipartUploadRequest.builder().bucket(bucket).key(key).build();
-    CreateMultipartUploadResponse createMultipartUploadResponse = s3Client.createMultipartUpload(createMultipartUploadRequest).get();
-    assertSuccess(createMultipartUploadResponse);
-
-    final String uploadId = createMultipartUploadResponse.uploadId();
-
-    List<CompletedPart> completedParts = new ArrayList<>();
-
-    /* TODO
-    for (int part = 1; part <= 3; part++) {
-      AsyncRequestBody requestBody = AsyncRequestBody.fromString("Hello world");
-      UploadPartRequest uploadPartRequest =
-          UploadPartRequest.builder().bucket(bucket).key(key).uploadId(uploadId).partNumber(part).build();
-      UploadPartResponse uploadPartResponse = s3Client.uploadPart(uploadPartRequest, requestBody).get();
-      assertSuccess(uploadPartResponse);
-      LOGGER.info("uploaded part " + part);
-      completedParts.add(CompletedPart.builder().partNumber(part).build());
-    }
-
-    CompletedMultipartUpload completedMultipartUpload = CompletedMultipartUpload.builder().parts(completedParts).build();
-
-    CompleteMultipartUploadRequest completeMultipartUploadRequest = CompleteMultipartUploadRequest.builder().bucket(bucket).key(key).uploadId(uploadId).multipartUpload(completedMultipartUpload).build();
-    CompleteMultipartUploadResponse completeMultipartUploadResponse = s3Client.completeMultipartUpload(completeMultipartUploadRequest).get();
-    assertSuccess(completeMultipartUploadResponse);
-
-     */
-  }
-
   @ParameterizedTest
   @MethodSource("awsSdkAsyncHttpClients")
   public void kinesis(final String sdkHttpClientName, final SdkAsyncHttpClient sdkHttpClient) throws Exception {
@@ -254,12 +186,6 @@ public class LocalstackTest {
 
   private KinesisAsyncClient createKinesisClient(final SdkAsyncHttpClient sdkHttpClient) {
     return (KinesisAsyncClient) configure(KinesisAsyncClient.builder().httpClient(sdkHttpClient)).build();
-  }
-
-  private static S3CrtAsyncClientBuilder configure(S3CrtAsyncClientBuilder builder) {
-    return builder.endpointOverride(LOCALSTACK.getEndpoint())
-        .credentialsProvider(AWS_CREDENTIALS_PROVIDER)
-        .region(AWS_REGION);
   }
 
   private static AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {

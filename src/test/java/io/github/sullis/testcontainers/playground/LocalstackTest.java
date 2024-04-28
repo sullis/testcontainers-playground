@@ -52,6 +52,7 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
+import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
 
@@ -89,8 +90,8 @@ public class LocalstackTest {
 
   static Stream<Arguments> awsSdkHttpClients() {
     return Stream.of(
-        arguments("nettyHttpClient", NettyNioAsyncHttpClient.builder().build()),
-        arguments("crtHttpClient", AwsCrtAsyncHttpClient.builder().build())
+        arguments("nettyAsyncHttpClient", NettyNioAsyncHttpClient.builder().build()),
+        arguments("crtAsyncHttpClient", AwsCrtAsyncHttpClient.builder().build())
     );
   }
 
@@ -163,7 +164,8 @@ public class LocalstackTest {
 
   public static List<S3AsyncClient> s3AsyncClients() {
     var builder = (S3AsyncClientBuilder) configure(S3AsyncClient.builder());
-    return List.of(builder.build());
+    var crtBuilder = (S3CrtAsyncClientBuilder) configure(S3AsyncClient.crtBuilder());
+    return List.of(builder.build(), crtBuilder.build());
   }
 
   @ParameterizedTest
@@ -216,17 +218,24 @@ public class LocalstackTest {
     return (KinesisClient) configure(KinesisClient.builder()).build();
   }
 
+  private static S3CrtAsyncClientBuilder configure(S3CrtAsyncClientBuilder builder) {
+    return builder.endpointOverride(LOCALSTACK.getEndpoint())
+        .credentialsProvider(AWS_CREDENTIALS_PROVIDER)
+        .region(AWS_REGION);
+  }
+
   private static AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {
     if (builder instanceof SdkSyncClientBuilder) {
       ((SdkSyncClientBuilder<?, ?>) builder).httpClient(SYNC_HTTP_CLIENT_BUILDER_LIST.get(0).build());
     } else if (builder instanceof SdkAsyncClientBuilder<?,?>) {
       ((SdkAsyncClientBuilder<?, ?>) builder).httpClient(ASYNC_HTTP_CLIENT_BUILDER_LIST.get(0).build());
-    }else {
+    } else {
       throw new IllegalStateException("unexpected AwsClientBuilder");
     }
+
     return builder.endpointOverride(LOCALSTACK.getEndpoint())
-        .credentialsProvider(AWS_CREDENTIALS_PROVIDER)
-        .region(AWS_REGION);
+          .credentialsProvider(AWS_CREDENTIALS_PROVIDER)
+          .region(AWS_REGION);
   }
 
   private static void assertSuccess(final SdkResponse sdkResponse) {

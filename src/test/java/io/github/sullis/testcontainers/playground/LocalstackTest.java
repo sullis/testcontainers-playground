@@ -18,6 +18,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.SdkResponse;
+import software.amazon.awssdk.core.client.builder.SdkAsyncClientBuilder;
 import software.amazon.awssdk.core.client.builder.SdkSyncClientBuilder;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.http.SdkHttpClient;
@@ -57,6 +58,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class LocalstackTest {
   private static final SdkHttpClient.Builder<?> AWS_SDK_HTTP_CLIENT_BUILDER = ApacheHttpClient.builder();
+  private static final SdkAsyncHttpClient.Builder<?> AWS_SDK_ASYNC_HTTP_CLIENT_BUILDER = NettyNioAsyncHttpClient.builder();
 
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
       .withServices(LocalStackContainer.Service.DYNAMODB, LocalStackContainer.Service.S3, LocalStackContainer.Service.KINESIS);
@@ -208,7 +210,9 @@ public class LocalstackTest {
   private AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {
     if (builder instanceof SdkSyncClientBuilder) {
       ((SdkSyncClientBuilder<?, ?>) builder).httpClient(AWS_SDK_HTTP_CLIENT_BUILDER.build());
-    } else {
+    } else if (builder instanceof SdkAsyncClientBuilder<?,?>) {
+      ((SdkAsyncClientBuilder<?, ?>) builder).httpClient(AWS_SDK_ASYNC_HTTP_CLIENT_BUILDER.build());
+    }else {
       throw new IllegalStateException("unexpected AwsClientBuilder");
     }
     return builder.endpointOverride(LOCALSTACK.getEndpoint())

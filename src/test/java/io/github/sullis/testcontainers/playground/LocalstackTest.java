@@ -2,6 +2,7 @@ package io.github.sullis.testcontainers.playground;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
@@ -26,6 +27,8 @@ import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.services.kinesis.KinesisClient;
 import software.amazon.awssdk.services.kinesis.model.CreateStreamResponse;
 import software.amazon.awssdk.services.kinesis.model.PutRecordResponse;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
@@ -57,8 +60,10 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 
 public class LocalstackTest {
-  private static final SdkHttpClient.Builder<?> AWS_SDK_HTTP_CLIENT_BUILDER = ApacheHttpClient.builder();
-  private static final SdkAsyncHttpClient.Builder<?> AWS_SDK_ASYNC_HTTP_CLIENT_BUILDER = NettyNioAsyncHttpClient.builder();
+  private static final List<SdkHttpClient.Builder<?>> SYNC_HTTP_CLIENT_BUILDER_LIST= List.of(
+      ApacheHttpClient.builder());
+  private static final List<SdkAsyncHttpClient.Builder<?>> ASYNC_HTTP_CLIENT_BUILDER_LIST = List.of(
+      NettyNioAsyncHttpClient.builder());
 
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
       .withServices(LocalStackContainer.Service.DYNAMODB, LocalStackContainer.Service.S3, LocalStackContainer.Service.KINESIS);
@@ -156,17 +161,21 @@ public class LocalstackTest {
     assertSuccess(deleteTableResponse);
   }
 
-  @Test
-  public void s3() throws Exception {
+  public static List<S3AsyncClient> s3AsyncClients() {
+    var builder = (S3AsyncClientBuilder) configure(S3AsyncClient.builder());
+    return List.of(builder.build());
+  }
+
+  @ParameterizedTest
+  @MethodSource("s3AsyncClients")
+  public void s3(S3AsyncClient s3Client) throws Exception {
     final byte[] payload = "payload123".getBytes(StandardCharsets.UTF_8);
     final String bucket = "bucket-" + UUID.randomUUID();
     final String pathToFile = "/path/" + UUID.randomUUID();
     final String location = "s3://" + bucket + pathToFile;
-    try (S3Client s3Client = createS3Client()) {
-      CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(bucket).build();
-      CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest);
-      assertSuccess(createBucketResponse);
-    }
+    CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(bucket).build();
+    CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest).get();
+    assertSuccess(createBucketResponse);
   }
 
   @Test
@@ -207,11 +216,11 @@ public class LocalstackTest {
     return (KinesisClient) configure(KinesisClient.builder()).build();
   }
 
-  private AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {
+  private static AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {
     if (builder instanceof SdkSyncClientBuilder) {
-      ((SdkSyncClientBuilder<?, ?>) builder).httpClient(AWS_SDK_HTTP_CLIENT_BUILDER.build());
+      ((SdkSyncClientBuilder<?, ?>) builder).httpClient(SYNC_HTTP_CLIENT_BUILDER_LIST.get(0).build());
     } else if (builder instanceof SdkAsyncClientBuilder<?,?>) {
-      ((SdkAsyncClientBuilder<?, ?>) builder).httpClient(AWS_SDK_ASYNC_HTTP_CLIENT_BUILDER.build());
+      ((SdkAsyncClientBuilder<?, ?>) builder).httpClient(ASYNC_HTTP_CLIENT_BUILDER_LIST.get(0).build());
     }else {
       throw new IllegalStateException("unexpected AwsClientBuilder");
     }

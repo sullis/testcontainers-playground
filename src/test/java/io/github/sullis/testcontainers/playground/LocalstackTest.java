@@ -237,14 +237,6 @@ public class LocalstackTest {
   }
 
   private static AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {
-    if (builder instanceof SdkSyncClientBuilder) {
-      ((SdkSyncClientBuilder<?, ?>) builder).httpClient(SYNC_HTTP_CLIENT_BUILDER_LIST.get(0).build());
-    } else if (builder instanceof SdkAsyncClientBuilder<?,?>) {
-      ((SdkAsyncClientBuilder<?, ?>) builder).httpClient(ASYNC_HTTP_CLIENT_BUILDER_LIST.get(0).build());
-    } else {
-      throw new IllegalStateException("unexpected AwsClientBuilder");
-    }
-
     return builder.endpointOverride(LOCALSTACK.getEndpoint())
           .credentialsProvider(AWS_CREDENTIALS_PROVIDER)
           .region(AWS_REGION);

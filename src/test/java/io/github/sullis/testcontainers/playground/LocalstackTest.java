@@ -100,9 +100,9 @@ public class LocalstackTest {
   @ParameterizedTest
   @MethodSource("awsSdkHttpClients")
   public void dynamodDb(final String sdkHttpClientName, final SdkAsyncHttpClient sdkHttpClient) throws Throwable {
-    final String key = "key-" + UUID.randomUUID().toString();
-    final String keyVal = "keyVal-" + UUID.randomUUID().toString();
-    final String tableName = "table-" + UUID.randomUUID().toString();
+    final String key = "key-" + UUID.randomUUID();
+    final String keyVal = "keyVal-" + UUID.randomUUID();
+    final String tableName = "table-" + UUID.randomUUID();
 
     final DynamoDbAsyncClient dbClient = createDynamoDbClient(sdkHttpClient);
 

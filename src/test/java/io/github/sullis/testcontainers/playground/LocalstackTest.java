@@ -87,7 +87,7 @@ public class LocalstackTest {
   }
 
 
-  static Stream<Arguments> awsSdkHttpClients() {
+  static Stream<Arguments> awsSdkAsyncHttpClients() {
     return Stream.of(
         arguments("nettyAsyncHttpClient", NettyNioAsyncHttpClient.builder().build()),
         arguments("crtAsyncHttpClient", AwsCrtAsyncHttpClient.builder().build())
@@ -95,7 +95,7 @@ public class LocalstackTest {
   }
 
   @ParameterizedTest
-  @MethodSource("awsSdkHttpClients")
+  @MethodSource("awsSdkAsyncHttpClients")
   public void dynamodDb(final String sdkHttpClientName, final SdkAsyncHttpClient sdkHttpClient) throws Throwable {
     final String key = "key-" + UUID.randomUUID();
     final String keyVal = "keyVal-" + UUID.randomUUID();
@@ -194,7 +194,7 @@ public class LocalstackTest {
   }
 
   @ParameterizedTest
-  @MethodSource("awsSdkHttpClients")
+  @MethodSource("awsSdkAsyncHttpClients")
   public void kinesis(final String sdkHttpClientName, final SdkAsyncHttpClient sdkHttpClient) throws Exception {
     final String streamName = UUID.randomUUID().toString();
     final String payload = "{}";

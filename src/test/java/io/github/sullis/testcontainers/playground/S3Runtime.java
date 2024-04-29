@@ -58,12 +58,10 @@ public interface S3Runtime {
       }
       this.container = container;
       this.awsCredentialsProvider = StaticCredentialsProvider.create(
-          AwsBasicCredentials.create("dummy", "dummy")
+          AwsBasicCredentials.create("minioadmin", "minioadmin")
       );
       this.awsRegion = Region.US_EAST_1;
-      this.endpoint = URI.create("http://" + container.getHost() + ":" + container.getFirstMappedPort());
-      String s3Url = container.getS3URL();
-      System.out.println("foo: " +container.getS3URL());
+      this.endpoint = URI.create("http://127.0.0.1:" + container.getFirstMappedPort());
     }
 
     @Override

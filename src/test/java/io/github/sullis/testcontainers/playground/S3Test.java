@@ -13,17 +13,11 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
 import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
@@ -40,13 +34,7 @@ public class S3Test {
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
       .withServices(LocalStackContainer.Service.DYNAMODB, LocalStackContainer.Service.S3, LocalStackContainer.Service.KINESIS);
 
-  private static final AwsCredentialsProvider AWS_CREDENTIALS_PROVIDER = StaticCredentialsProvider.create(
-      AwsBasicCredentials.create(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
-  );
-
-  private static final Region AWS_REGION = Region.of(LOCALSTACK.getRegion());
-
-  private static final MinIOContainer MINIO_CONTAINER = new MinIOContainer(DockerImageName.parse("minio/minio:latest"));
+  private static final MinIOContainer MINIO_CONTAINER = new MinIOContainer(DockerImageName.parse("minio/minio:latest")).withEnv("MINIO_DOMAIN", "localhost");
 
   private static final Logger LOGGER = LoggerFactory.getLogger(S3Test.class);
 
@@ -66,16 +54,25 @@ public class S3Test {
     }
   }
 
+  public static List<S3Runtime> s3Runtimes() {
+    return List.of(
+        new S3Runtime.LocalstackS3(LOCALSTACK),
+        new S3Runtime.MinioS3(MINIO_CONTAINER));
+  }
+
   public static List<S3AsyncClientInfo> s3AsyncClients() {
     List<S3AsyncClientInfo> result = new ArrayList<>();
-    ASYNC_HTTP_CLIENT_BUILDER_LIST.forEach(httpClientBuilder -> {
-      var httpClient = httpClientBuilder.build();
-      S3AsyncClient s3Client = (S3AsyncClient) configure(S3AsyncClient.builder().httpClient(httpClient)).build();
-      result.add(new S3AsyncClientInfo(httpClient.clientName(), s3Client));
-    });
+    for (S3Runtime s3Runtime : s3Runtimes()) {
+      ASYNC_HTTP_CLIENT_BUILDER_LIST.forEach(httpClientBuilder -> {
+        var httpClient = httpClientBuilder.build();
+        S3AsyncClient s3Client =
+            (S3AsyncClient) s3Runtime.configure(S3AsyncClient.builder().httpClient(httpClient)).build();
+        result.add(new S3AsyncClientInfo(httpClient.clientName(), s3Runtime, s3Client));
+      });
 
-    // S3 crtBuilder
-    result.add(new S3AsyncClientInfo("crtBuilder", configure(S3AsyncClient.crtBuilder()).build()));
+      // S3 crtBuilder
+      result.add(new S3AsyncClientInfo("crtBuilder", s3Runtime, s3Runtime.configure(S3AsyncClient.crtBuilder()).build()));
+    }
 
     return result;
   }
@@ -121,26 +118,14 @@ public class S3Test {
      */
   }
 
-  private static S3CrtAsyncClientBuilder configure(S3CrtAsyncClientBuilder builder) {
-    return builder.endpointOverride(LOCALSTACK.getEndpoint())
-        .credentialsProvider(AWS_CREDENTIALS_PROVIDER)
-        .region(AWS_REGION);
-  }
-
-  private static AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {
-    return builder.endpointOverride(LOCALSTACK.getEndpoint())
-          .credentialsProvider(AWS_CREDENTIALS_PROVIDER)
-          .region(AWS_REGION);
-  }
-
   private static void assertSuccess(final SdkResponse sdkResponse) {
     assertThat(sdkResponse.sdkHttpResponse().isSuccessful()).isTrue();
   }
 
-  public record S3AsyncClientInfo(String description, S3AsyncClient client) {
+  public record S3AsyncClientInfo(String description, S3Runtime s3Runtime, S3AsyncClient client) {
     @Override
     public String toString() {
-      return this.description + ":" + this.client.getClass().getSimpleName();
+      return this.description + ":" + s3Runtime.getClass().getSimpleName() + ":" + this.client.getClass().getSimpleName();
     }
   }
 }

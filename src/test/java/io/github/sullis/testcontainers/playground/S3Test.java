@@ -63,8 +63,8 @@ public class S3Test {
 
   public static List<S3Runtime> s3Runtimes() {
     return List.of(
-        new S3Runtime.LocalstackS3(LOCALSTACK),
-        new S3Runtime.MinioS3(MINIO_CONTAINER));
+        new S3Runtime.Localstack(LOCALSTACK),
+        new S3Runtime.Minio(MINIO_CONTAINER));
   }
 
   public static List<S3AsyncClientInfo> s3AsyncClients() {

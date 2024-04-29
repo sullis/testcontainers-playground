@@ -15,12 +15,12 @@ public interface S3Runtime {
   S3CrtAsyncClientBuilder configure(S3CrtAsyncClientBuilder builder);
   AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder);
 
-  class LocalstackS3 implements S3Runtime {
+  class Localstack implements S3Runtime {
     private final LocalStackContainer container;
     private final AwsCredentialsProvider awsCredentialsProvider;
     private final Region awsRegion;
 
-    public LocalstackS3(LocalStackContainer container) {
+    public Localstack(LocalStackContainer container) {
       if (!container.isRunning()) {
         throw new IllegalStateException("container is not running");
       }
@@ -46,13 +46,13 @@ public interface S3Runtime {
     }
   }
 
-  class MinioS3 implements S3Runtime {
+  class Minio implements S3Runtime {
     private final MinIOContainer container;
     private final AwsCredentialsProvider awsCredentialsProvider;
     private final Region awsRegion;
     private final URI endpoint;
 
-    public MinioS3(MinIOContainer container) {
+    public Minio(MinIOContainer container) {
       if (!container.isRunning()) {
         throw new IllegalStateException("container is not running");
       }

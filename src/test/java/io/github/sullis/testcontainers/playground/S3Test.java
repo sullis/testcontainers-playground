@@ -39,7 +39,7 @@ public class S3Test {
       AwsCrtAsyncHttpClient.builder());
 
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
-      .withServices(LocalStackContainer.Service.DYNAMODB, LocalStackContainer.Service.S3, LocalStackContainer.Service.KINESIS);
+      .withServices(LocalStackContainer.Service.S3);
 
   private static final MinIOContainer MINIO_CONTAINER = new MinIOContainer(DockerImageName.parse("minio/minio:latest")).withEnv("MINIO_DOMAIN", "localhost");
 

@@ -126,10 +126,10 @@ public class S3Test {
     assertThat(sdkResponse.sdkHttpResponse().isSuccessful()).isTrue();
   }
 
-  public record S3AsyncClientInfo(String description, S3Runtime s3Runtime, S3AsyncClient client) {
+  public record S3AsyncClientInfo(String httpClientDescription, S3Runtime s3Runtime, S3AsyncClient client) {
     @Override
     public String toString() {
-      return this.description + ":" + s3Runtime.getClass().getSimpleName() + ":" + this.client.getClass().getSimpleName();
+      return s3Runtime.getClass().getSimpleName() + ":" + httpClientDescription + ":" + this.client.getClass().getSimpleName();
     }
   }
 }

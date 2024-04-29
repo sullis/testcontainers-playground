@@ -88,10 +88,7 @@ public class S3Test {
   @MethodSource("s3AsyncClients")
   public void s3(S3AsyncClientInfo s3ClientInfo) throws Exception {
     final S3AsyncClient s3Client = s3ClientInfo.client;
-    final byte[] payload = "payload123".getBytes(StandardCharsets.UTF_8);
     final String bucket = "bucket-" + UUID.randomUUID();
-    final String pathToFile = "/path/" + UUID.randomUUID();
-    final String location = "s3://" + bucket + pathToFile;
     CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(bucket).build();
     CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest).get();
     assertSuccess(createBucketResponse);

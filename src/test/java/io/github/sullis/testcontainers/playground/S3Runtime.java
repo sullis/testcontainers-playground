@@ -44,6 +44,11 @@ public interface S3Runtime {
           .credentialsProvider(awsCredentialsProvider)
           .region(awsRegion);
     }
+
+    @Override
+    public String toString() {
+      return this.getClass().getSimpleName();
+    }
   }
 
   class Minio implements S3Runtime {
@@ -76,6 +81,11 @@ public interface S3Runtime {
       return builder.endpointOverride(endpoint)
           .credentialsProvider(awsCredentialsProvider)
           .region(awsRegion);
+    }
+
+    @Override
+    public String toString() {
+      return this.getClass().getSimpleName();
     }
   }
 }

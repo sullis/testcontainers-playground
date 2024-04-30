@@ -69,15 +69,15 @@ public class S3Test {
     }
   }
 
-  public static List<S3Runtime> s3Runtimes() {
+  public static List<CloudRuntime> s3Runtimes() {
     return List.of(
-        new S3Runtime.Localstack(LOCALSTACK),
-        new S3Runtime.Minio(MINIO_CONTAINER));
+        new CloudRuntime.Localstack(LOCALSTACK),
+        new CloudRuntime.Minio(MINIO_CONTAINER));
   }
 
   public static List<S3AsyncClientInfo> s3AsyncClients() {
     List<S3AsyncClientInfo> result = new ArrayList<>();
-    for (S3Runtime s3Runtime : s3Runtimes()) {
+    for (CloudRuntime s3Runtime : s3Runtimes()) {
       ASYNC_HTTP_CLIENT_BUILDER_LIST.forEach(httpClientBuilder -> {
         var httpClient = httpClientBuilder.build();
         S3AsyncClient s3Client =
@@ -94,7 +94,7 @@ public class S3Test {
 
   public static List<S3ClientInfo> s3Clients() {
     List<S3ClientInfo> result = new ArrayList<>();
-    for (S3Runtime s3Runtime : s3Runtimes()) {
+    for (CloudRuntime s3Runtime: s3Runtimes()) {
       SYNC_HTTP_CLIENT_BUILDER_LIST.forEach(httpClientBuilder -> {
         var httpClient = httpClientBuilder.build();
         S3Client s3Client =
@@ -185,17 +185,17 @@ public class S3Test {
     assertThat(sdkResponse.sdkHttpResponse().isSuccessful()).isTrue();
   }
 
-  public record S3AsyncClientInfo(String httpClientDescription, S3Runtime s3Runtime, S3AsyncClient client) {
+  public record S3AsyncClientInfo(String httpClientDescription, CloudRuntime cloudRuntime, S3AsyncClient client) {
     @Override
     public String toString() {
-      return s3Runtime.getClass().getSimpleName() + ":" + httpClientDescription + ":" + this.client.getClass().getSimpleName();
+      return cloudRuntime.getClass().getSimpleName() + ":" + httpClientDescription + ":" + this.client.getClass().getSimpleName();
     }
   }
 
-  public record S3ClientInfo(String httpClientDescription, S3Runtime s3Runtime, S3Client client) {
+  public record S3ClientInfo(String httpClientDescription, CloudRuntime cloudRuntime, S3Client client) {
     @Override
     public String toString() {
-      return s3Runtime.getClass().getSimpleName() + ":" + httpClientDescription + ":" + this.client.getClass().getSimpleName();
+      return cloudRuntime.getClass().getSimpleName() + ":" + httpClientDescription + ":" + this.client.getClass().getSimpleName();
     }
   }
 }

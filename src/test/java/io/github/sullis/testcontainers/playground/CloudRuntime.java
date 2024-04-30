@@ -11,11 +11,11 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 
 
-public interface S3Runtime {
+public interface CloudRuntime {
   S3CrtAsyncClientBuilder configure(S3CrtAsyncClientBuilder builder);
   AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder);
 
-  class Localstack implements S3Runtime {
+  class Localstack implements CloudRuntime {
     private final LocalStackContainer container;
     private final AwsCredentialsProvider awsCredentialsProvider;
     private final Region awsRegion;
@@ -51,7 +51,7 @@ public interface S3Runtime {
     }
   }
 
-  class Minio implements S3Runtime {
+  class Minio implements CloudRuntime {
     private final MinIOContainer container;
     private final AwsCredentialsProvider awsCredentialsProvider;
     private final Region awsRegion;

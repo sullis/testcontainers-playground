@@ -1,6 +1,5 @@
 package io.github.sullis.testcontainers.playground;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -16,10 +15,15 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.SdkHttpClient;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
+import software.amazon.awssdk.http.crt.AwsCrtHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
@@ -37,6 +41,10 @@ public class S3Test {
   private static final List<SdkAsyncHttpClient.Builder<?>> ASYNC_HTTP_CLIENT_BUILDER_LIST = List.of(
       NettyNioAsyncHttpClient.builder(),
       AwsCrtAsyncHttpClient.builder());
+
+  private static final List<SdkHttpClient.Builder<?>> SYNC_HTTP_CLIENT_BUILDER_LIST = List.of(
+      ApacheHttpClient.builder(),
+      AwsCrtHttpClient.builder());
 
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
       .withServices(LocalStackContainer.Service.S3);
@@ -84,6 +92,20 @@ public class S3Test {
     return result;
   }
 
+  public static List<S3ClientInfo> s3Clients() {
+    List<S3ClientInfo> result = new ArrayList<>();
+    for (S3Runtime s3Runtime : s3Runtimes()) {
+      SYNC_HTTP_CLIENT_BUILDER_LIST.forEach(httpClientBuilder -> {
+        var httpClient = httpClientBuilder.build();
+        S3Client s3Client =
+            (S3Client) s3Runtime.configure(S3Client.builder().httpClient(httpClient)).build();
+        result.add(new S3ClientInfo(httpClient.clientName(), s3Runtime, s3Client));
+      });
+    }
+
+    return result;
+  }
+
   @ParameterizedTest
   @MethodSource("s3AsyncClients")
   public void validateS3AsyncClient(S3AsyncClientInfo s3ClientInfo) throws Exception {
@@ -122,11 +144,55 @@ public class S3Test {
     assertSuccess(completeMultipartUploadResponse);
   }
 
+  @ParameterizedTest
+  @MethodSource("s3Clients")
+  public void validateS3Client(S3ClientInfo s3ClientInfo) throws Exception {
+    final S3Client s3Client = s3ClientInfo.client;
+    final String bucket = "bucket-" + UUID.randomUUID();
+    CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(bucket).build();
+    CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest);
+    assertSuccess(createBucketResponse);
+
+    final String key = "key-" + UUID.randomUUID();
+    CreateMultipartUploadRequest createMultipartUploadRequest = CreateMultipartUploadRequest.builder().bucket(bucket).key(key).build();
+    CreateMultipartUploadResponse createMultipartUploadResponse = s3Client.createMultipartUpload(createMultipartUploadRequest);
+    assertSuccess(createMultipartUploadResponse);
+
+    final String uploadId = createMultipartUploadResponse.uploadId();
+
+    List<CompletedPart> completedParts = new ArrayList<>();
+    final String partText = StringUtils.repeat("a", 6_000_000);
+
+    for (int part = 1; part <= 3; part++) {
+      RequestBody requestBody = RequestBody.fromString(partText);
+      UploadPartRequest uploadPartRequest =
+          UploadPartRequest.builder().bucket(bucket).key(key).uploadId(uploadId).partNumber(part).build();
+      UploadPartResponse uploadPartResponse = s3Client.uploadPart(uploadPartRequest, requestBody);
+      assertSuccess(uploadPartResponse);
+      LOGGER.info("uploaded part " + part + " using s3 client: " + s3ClientInfo);
+      completedParts.add(CompletedPart.builder().partNumber(part).eTag(uploadPartResponse.eTag()).build());
+    }
+
+    CompletedMultipartUpload completedMultipartUpload = CompletedMultipartUpload.builder().parts(completedParts).build();
+
+    CompleteMultipartUploadRequest
+        completeMultipartUploadRequest = CompleteMultipartUploadRequest.builder().bucket(bucket).key(key).uploadId(uploadId).multipartUpload(completedMultipartUpload).build();
+    CompleteMultipartUploadResponse
+        completeMultipartUploadResponse = s3Client.completeMultipartUpload(completeMultipartUploadRequest);
+    assertSuccess(completeMultipartUploadResponse);
+  }
   private static void assertSuccess(final SdkResponse sdkResponse) {
     assertThat(sdkResponse.sdkHttpResponse().isSuccessful()).isTrue();
   }
 
   public record S3AsyncClientInfo(String httpClientDescription, S3Runtime s3Runtime, S3AsyncClient client) {
+    @Override
+    public String toString() {
+      return s3Runtime.getClass().getSimpleName() + ":" + httpClientDescription + ":" + this.client.getClass().getSimpleName();
+    }
+  }
+
+  public record S3ClientInfo(String httpClientDescription, S3Runtime s3Runtime, S3Client client) {
     @Override
     public String toString() {
       return s3Runtime.getClass().getSimpleName() + ":" + httpClientDescription + ":" + this.client.getClass().getSimpleName();

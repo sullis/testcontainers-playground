@@ -86,7 +86,7 @@ public class S3Test {
 
   @ParameterizedTest
   @MethodSource("s3AsyncClients")
-  public void s3(S3AsyncClientInfo s3ClientInfo) throws Exception {
+  public void validateS3AsyncClient(S3AsyncClientInfo s3ClientInfo) throws Exception {
     final S3AsyncClient s3Client = s3ClientInfo.client;
     final String bucket = "bucket-" + UUID.randomUUID();
     CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(bucket).build();

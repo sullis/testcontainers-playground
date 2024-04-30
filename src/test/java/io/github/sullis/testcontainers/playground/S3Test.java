@@ -1,5 +1,6 @@
 package io.github.sullis.testcontainers.playground;
 
+import com.adobe.testing.s3mock.testcontainers.S3MockContainer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -51,12 +52,15 @@ public class S3Test {
 
   private static final MinIOContainer MINIO_CONTAINER = new MinIOContainer(DockerImageName.parse("minio/minio:latest"));
 
+  private static final S3MockContainer S3_MOCK_CONTAINER = new S3MockContainer(DockerImageName.parse("adobe/s3mock:latest"));
+
   private static final Logger LOGGER = LoggerFactory.getLogger(S3Test.class);
 
   @BeforeAll
   public static void startContainers() {
     LOCALSTACK.start();
     MINIO_CONTAINER.start();
+    S3_MOCK_CONTAINER.start();
   }
 
   @AfterAll
@@ -67,12 +71,16 @@ public class S3Test {
     if (MINIO_CONTAINER != null) {
       MINIO_CONTAINER.stop();
     }
+    if (S3_MOCK_CONTAINER != null) {
+      S3_MOCK_CONTAINER.stop();
+    }
   }
 
   public static List<CloudRuntime> s3Runtimes() {
     return List.of(
         new CloudRuntime.Localstack(LOCALSTACK),
-        new CloudRuntime.Minio(MINIO_CONTAINER));
+        new CloudRuntime.Minio(MINIO_CONTAINER),
+        new CloudRuntime.S3Mock(S3_MOCK_CONTAINER));
   }
 
   public static List<S3AsyncClientInfo> s3AsyncClients() {

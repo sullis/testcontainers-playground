@@ -1,5 +1,6 @@
 package io.github.sullis.testcontainers.playground;
 
+import com.adobe.testing.s3mock.testcontainers.S3MockContainer;
 import java.net.URI;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -86,6 +87,37 @@ public interface CloudRuntime {
     @Override
     public String toString() {
       return this.getClass().getSimpleName();
+    }
+  }
+
+  class S3Mock implements CloudRuntime {
+    private final S3MockContainer container;
+    private final AwsCredentialsProvider awsCredentialsProvider;
+    private final Region awsRegion;
+    private final URI endpoint;
+
+    public S3Mock(S3MockContainer container) {
+      this.container = container;
+      this.awsCredentialsProvider = StaticCredentialsProvider.create(
+          AwsBasicCredentials.create("dummy", "dummy")
+      );
+      this.awsRegion = Region.US_EAST_1;
+      this.endpoint = URI.create("http://127.0.0.1:" + this.container.getHttpServerPort());
+      System.out.println("endpoint: " + endpoint);
+    }
+
+    @Override
+    public S3CrtAsyncClientBuilder configure(S3CrtAsyncClientBuilder builder) {
+      return builder.endpointOverride(endpoint)
+          .credentialsProvider(awsCredentialsProvider)
+          .region(awsRegion);
+    }
+
+    @Override
+    public AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {
+      return builder.endpointOverride(endpoint)
+          .credentialsProvider(awsCredentialsProvider)
+          .region(awsRegion);
     }
   }
 }

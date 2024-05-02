@@ -1,20 +1,15 @@
 package io.github.sullis.testcontainers.playground.s3;
 
-import com.adobe.testing.s3mock.testcontainers.S3MockContainer;
 import io.github.sullis.testcontainers.playground.CloudRuntime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.MinIOContainer;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -39,7 +34,8 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class S3Test {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+abstract class AbstractS3Test {
   private static final List<SdkAsyncHttpClient.Builder<?>> ASYNC_HTTP_CLIENT_BUILDER_LIST = List.of(
       NettyNioAsyncHttpClient.builder(),
       AwsCrtAsyncHttpClient.builder());
@@ -48,43 +44,11 @@ public class S3Test {
       ApacheHttpClient.builder(),
       AwsCrtHttpClient.builder());
 
-  private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
-      .withServices(LocalStackContainer.Service.S3);
+  private final Logger logger = LoggerFactory.getLogger(getClass());
 
-  private static final MinIOContainer MINIO_CONTAINER = new MinIOContainer(DockerImageName.parse("minio/minio:latest"));
+  protected abstract List<CloudRuntime> s3Runtimes();
 
-  private static final S3MockContainer S3_MOCK_CONTAINER = new S3MockContainer(DockerImageName.parse("adobe/s3mock:latest"));
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(S3Test.class);
-
-  @BeforeAll
-  public static void startContainers() {
-    LOCALSTACK.start();
-    MINIO_CONTAINER.start();
-    S3_MOCK_CONTAINER.start();
-  }
-
-  @AfterAll
-  public static void stopContainers() {
-    if (LOCALSTACK != null) {
-      LOCALSTACK.stop();
-    }
-    if (MINIO_CONTAINER != null) {
-      MINIO_CONTAINER.stop();
-    }
-    if (S3_MOCK_CONTAINER != null) {
-      S3_MOCK_CONTAINER.stop();
-    }
-  }
-
-  public static List<CloudRuntime> s3Runtimes() {
-    return List.of(
-        new CloudRuntime.Localstack(LOCALSTACK),
-        new CloudRuntime.Minio(MINIO_CONTAINER),
-        new CloudRuntime.S3Mock(S3_MOCK_CONTAINER));
-  }
-
-  public static List<S3AsyncClientInfo> s3AsyncClients() {
+  public List<S3AsyncClientInfo> s3AsyncClients() {
     List<S3AsyncClientInfo> result = new ArrayList<>();
     for (CloudRuntime s3Runtime : s3Runtimes()) {
       ASYNC_HTTP_CLIENT_BUILDER_LIST.forEach(httpClientBuilder -> {
@@ -101,7 +65,7 @@ public class S3Test {
     return result;
   }
 
-  public static List<S3ClientInfo> s3Clients() {
+  public List<S3ClientInfo> s3Clients() {
     List<S3ClientInfo> result = new ArrayList<>();
     for (CloudRuntime s3Runtime: s3Runtimes()) {
       SYNC_HTTP_CLIENT_BUILDER_LIST.forEach(httpClientBuilder -> {
@@ -140,7 +104,7 @@ public class S3Test {
           UploadPartRequest.builder().bucket(bucket).key(key).uploadId(uploadId).partNumber(part).build();
       UploadPartResponse uploadPartResponse = s3Client.uploadPart(uploadPartRequest, requestBody).get();
       assertSuccess(uploadPartResponse);
-      LOGGER.info("uploaded part " + part + " using s3 client: " + s3ClientInfo);
+      logger.info("uploaded part " + part + " using s3 client: " + s3ClientInfo);
       completedParts.add(CompletedPart.builder().partNumber(part).eTag(uploadPartResponse.eTag()).build());
     }
 
@@ -178,7 +142,7 @@ public class S3Test {
           UploadPartRequest.builder().bucket(bucket).key(key).uploadId(uploadId).partNumber(part).build();
       UploadPartResponse uploadPartResponse = s3Client.uploadPart(uploadPartRequest, requestBody);
       assertSuccess(uploadPartResponse);
-      LOGGER.info("uploaded part " + part + " using s3 client: " + s3ClientInfo);
+      logger.info("uploaded part " + part + " using s3 client: " + s3ClientInfo);
       completedParts.add(CompletedPart.builder().partNumber(part).eTag(uploadPartResponse.eTag()).build());
     }
 

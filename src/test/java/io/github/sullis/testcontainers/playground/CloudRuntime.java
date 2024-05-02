@@ -119,4 +119,19 @@ public interface CloudRuntime {
           .region(awsRegion);
     }
   }
+
+  class Aws implements CloudRuntime {
+
+    public Aws() { }
+
+    @Override
+    public S3CrtAsyncClientBuilder configure(S3CrtAsyncClientBuilder builder) {
+      return builder;
+    }
+
+    @Override
+    public AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {
+      return builder;
+    }
+  }
 }

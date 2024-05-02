@@ -103,7 +103,6 @@ public interface CloudRuntime {
       );
       this.awsRegion = Region.US_EAST_1;
       this.endpoint = URI.create("http://127.0.0.1:" + this.container.getHttpServerPort());
-      System.out.println("endpoint: " + endpoint);
     }
 
     @Override

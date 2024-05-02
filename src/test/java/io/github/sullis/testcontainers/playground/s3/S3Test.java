@@ -1,6 +1,7 @@
-package io.github.sullis.testcontainers.playground;
+package io.github.sullis.testcontainers.playground.s3;
 
 import com.adobe.testing.s3mock.testcontainers.S3MockContainer;
+import io.github.sullis.testcontainers.playground.CloudRuntime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;

@@ -1,10 +1,13 @@
 package io.github.sullis.testcontainers.playground.s3;
 
 import io.github.sullis.testcontainers.playground.CloudRuntime;
+import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
+import org.assertj.core.util.Files;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -29,6 +32,8 @@ import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
@@ -115,6 +120,15 @@ abstract class AbstractS3Test {
     CompleteMultipartUploadResponse
         completeMultipartUploadResponse = s3Client.completeMultipartUpload(completeMultipartUploadRequest).get();
     assertSuccess(completeMultipartUploadResponse);
+
+    Path localPath = Path.of(Files.temporaryFolderPath() + "/" + UUID.randomUUID().toString());
+    File localFile = localPath.toFile();
+
+    GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(bucket).key(key).build();
+    GetObjectResponse getObjectResponse = s3Client.getObject(getObjectRequest, localFile.toPath()).get();
+    assertSuccess(getObjectResponse);
+    assertThat(localFile).exists();
+    assertThat(localFile).hasSize(18000000L);
   }
 
   @ParameterizedTest
@@ -153,7 +167,17 @@ abstract class AbstractS3Test {
     CompleteMultipartUploadResponse
         completeMultipartUploadResponse = s3Client.completeMultipartUpload(completeMultipartUploadRequest);
     assertSuccess(completeMultipartUploadResponse);
+
+    Path localPath = Path.of(Files.temporaryFolderPath() + "/" + UUID.randomUUID().toString());
+    File localFile = localPath.toFile();
+
+    GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(bucket).key(key).build();
+    GetObjectResponse getObjectResponse = s3Client.getObject(getObjectRequest, localFile.toPath());
+    assertSuccess(getObjectResponse);
+    assertThat(localFile).exists();
+    assertThat(localFile).hasSize(18000000L);
   }
+
   private static void assertSuccess(final SdkResponse sdkResponse) {
     assertThat(sdkResponse.sdkHttpResponse().isSuccessful()).isTrue();
   }

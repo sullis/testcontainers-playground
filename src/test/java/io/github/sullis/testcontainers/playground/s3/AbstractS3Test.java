@@ -34,6 +34,9 @@ import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
@@ -129,6 +132,15 @@ abstract class AbstractS3Test {
     assertSuccess(getObjectResponse);
     assertThat(localFile).exists();
     assertThat(localFile).hasSize(18000000L);
+
+    ListObjectsV2Request listObjectsV2Request = ListObjectsV2Request.builder().bucket(bucket).build();
+    ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(listObjectsV2Request).get();
+    assertSuccess(listObjectsV2Response);
+    List<S3Object> s3Objects = listObjectsV2Response.contents();
+    assertThat(s3Objects).hasSize(1);
+    S3Object s3Object = s3Objects.get(0);
+    assertThat(s3Object.key()).isEqualTo(key);
+    assertThat(s3Object.eTag()).isNotNull();
   }
 
   @ParameterizedTest
@@ -176,6 +188,15 @@ abstract class AbstractS3Test {
     assertSuccess(getObjectResponse);
     assertThat(localFile).exists();
     assertThat(localFile).hasSize(18000000L);
+
+    ListObjectsV2Request listObjectsV2Request = ListObjectsV2Request.builder().bucket(bucket).build();
+    ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(listObjectsV2Request);
+    assertSuccess(listObjectsV2Response);
+    List<S3Object> s3Objects = listObjectsV2Response.contents();
+    assertThat(s3Objects).hasSize(1);
+    S3Object s3Object = s3Objects.get(0);
+    assertThat(s3Object.key()).isEqualTo(key);
+    assertThat(s3Object.eTag()).isNotNull();
   }
 
   private static void assertSuccess(final SdkResponse sdkResponse) {

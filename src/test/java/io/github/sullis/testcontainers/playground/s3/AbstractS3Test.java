@@ -44,6 +44,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AbstractS3Test {
+  private static final int NUM_PARTS = 3;
+  private static final int PART_SIZE = 6_000_000;
+
   private static final List<SdkAsyncHttpClient.Builder<?>> ASYNC_HTTP_CLIENT_BUILDER_LIST = List.of(
       NettyNioAsyncHttpClient.builder(),
       AwsCrtAsyncHttpClient.builder());
@@ -104,9 +107,9 @@ abstract class AbstractS3Test {
     final String uploadId = createMultipartUploadResponse.uploadId();
 
     List<CompletedPart> completedParts = new ArrayList<>();
-    final String partText = StringUtils.repeat("a", 6_000_000);
+    final String partText = StringUtils.repeat("a", PART_SIZE);
 
-    for (int part = 1; part <= 3; part++) {
+    for (int part = 1; part <= NUM_PARTS; part++) {
       AsyncRequestBody requestBody = AsyncRequestBody.fromString(partText);
       UploadPartRequest uploadPartRequest =
           UploadPartRequest.builder().bucket(bucket).key(key).uploadId(uploadId).partNumber(part).build();
@@ -160,9 +163,9 @@ abstract class AbstractS3Test {
     final String uploadId = createMultipartUploadResponse.uploadId();
 
     List<CompletedPart> completedParts = new ArrayList<>();
-    final String partText = StringUtils.repeat("a", 6_000_000);
+    final String partText = StringUtils.repeat("a", PART_SIZE);
 
-    for (int part = 1; part <= 3; part++) {
+    for (int part = 1; part <= PART_SIZE; part++) {
       RequestBody requestBody = RequestBody.fromString(partText);
       UploadPartRequest uploadPartRequest =
           UploadPartRequest.builder().bucket(bucket).key(key).uploadId(uploadId).partNumber(part).build();

@@ -165,7 +165,7 @@ abstract class AbstractS3Test {
     List<CompletedPart> completedParts = new ArrayList<>();
     final String partText = StringUtils.repeat("a", PART_SIZE);
 
-    for (int part = 1; part <= PART_SIZE; part++) {
+    for (int part = 1; part <= NUM_PARTS; part++) {
       RequestBody requestBody = RequestBody.fromString(partText);
       UploadPartRequest uploadPartRequest =
           UploadPartRequest.builder().bucket(bucket).key(key).uploadId(uploadId).partNumber(part).build();

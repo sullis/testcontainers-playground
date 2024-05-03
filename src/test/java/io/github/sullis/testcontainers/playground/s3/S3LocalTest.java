@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
+import software.amazon.awssdk.services.s3.model.DataRedundancy;
 
 
 public class S3LocalTest extends AbstractS3Test {
@@ -45,5 +46,10 @@ public class S3LocalTest extends AbstractS3Test {
         new CloudRuntime.Localstack(LOCALSTACK),
         new CloudRuntime.Minio(MINIO_CONTAINER),
         new CloudRuntime.S3Mock(S3_MOCK_CONTAINER));
+  }
+
+  @Override
+  protected DataRedundancy[] dataRedundancyValues() {
+    return new DataRedundancy[] { null };
   }
 }

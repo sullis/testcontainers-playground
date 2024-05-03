@@ -31,6 +31,7 @@ public class S3AwsTest extends AbstractS3Test {
     return List.of(new CloudRuntime.Aws());
  }
 
+  @Override
   protected DataRedundancy[] dataRedundancyValues() {
     return new DataRedundancy[] { null, DataRedundancy.SINGLE_AVAILABILITY_ZONE };
   }

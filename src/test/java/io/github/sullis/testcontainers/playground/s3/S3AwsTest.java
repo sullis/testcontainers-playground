@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.services.s3.model.DataRedundancy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,4 +30,8 @@ public class S3AwsTest extends AbstractS3Test {
   protected List<CloudRuntime> s3Runtimes() {
     return List.of(new CloudRuntime.Aws());
  }
+
+  protected DataRedundancy[] dataRedundancyValues() {
+    return new DataRedundancy[] { null, DataRedundancy.SINGLE_AVAILABILITY_ZONE };
+  }
 }

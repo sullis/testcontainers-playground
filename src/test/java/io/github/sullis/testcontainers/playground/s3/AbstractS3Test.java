@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.assertj.core.util.Files;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -48,13 +49,12 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AbstractS3Test {
   private static final int PART_SIZE = 5 * 1024 * 1024;
   private static final int NUM_PARTS = 3;
   private static final long EXPECTED_OBJECT_SIZE = NUM_PARTS * PART_SIZE;
-
-  private static final DataRedundancy[] DATA_REDUNDANCY_VALUES = new DataRedundancy[] { DataRedundancy.SINGLE_AVAILABILITY_ZONE, null };
 
   private static final List<SdkAsyncHttpClient.Builder<?>> ASYNC_HTTP_CLIENT_BUILDER_LIST = List.of(
       NettyNioAsyncHttpClient.builder(),
@@ -67,6 +67,11 @@ abstract class AbstractS3Test {
   private final Logger logger = LoggerFactory.getLogger(getClass());
 
   protected abstract List<CloudRuntime> s3Runtimes();
+
+  /** this method must return a non-empty array */
+  protected DataRedundancy[] dataRedundancyValues() {
+    return new DataRedundancy[] { null };
+  }
 
   public List<S3AsyncClientInfo> s3AsyncClients() {
     List<S3AsyncClientInfo> result = new ArrayList<>();
@@ -101,7 +106,7 @@ abstract class AbstractS3Test {
 
   private Stream<Arguments> validateS3AsyncClientArguments() {
     List<Arguments> argumentsList = new ArrayList<>();
-    for (DataRedundancy dataRedundancy : DATA_REDUNDANCY_VALUES) {
+    for (DataRedundancy dataRedundancy : dataRedundancyValues()) {
       for (S3AsyncClientInfo s3AsyncClient : s3AsyncClients()) {
         argumentsList.add(Arguments.of(s3AsyncClient, dataRedundancy));
       }
@@ -111,12 +116,19 @@ abstract class AbstractS3Test {
 
   private Stream<Arguments> validateS3ClientArguments() {
     List<Arguments> argumentsList = new ArrayList<>();
-    for (DataRedundancy dataRedundancy : DATA_REDUNDANCY_VALUES) {
+    for (DataRedundancy dataRedundancy : dataRedundancyValues()) {
       for (S3ClientInfo s3Client : s3Clients()) {
         argumentsList.add(Arguments.of(s3Client, dataRedundancy));
       }
     }
     return argumentsList.stream();
+  }
+
+  @BeforeEach
+  void checkDataRedundancyValues() {
+    if (this.dataRedundancyValues().length == 0) {
+      throw new IllegalStateException("dataRedundancyValues is zero length");
+    }
   }
 
   @ParameterizedTest

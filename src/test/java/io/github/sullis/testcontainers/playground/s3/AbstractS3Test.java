@@ -6,10 +6,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.assertj.core.util.Files;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,14 +26,18 @@ import software.amazon.awssdk.http.crt.AwsCrtHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.BucketInfo;
+import software.amazon.awssdk.services.s3.model.BucketType;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.CreateBucketConfiguration;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.DataRedundancy;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
@@ -44,8 +50,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AbstractS3Test {
+  private static final int PART_SIZE = 5 * 1024 * 1024;
   private static final int NUM_PARTS = 3;
-  private static final int PART_SIZE = 6_000_000;
+  private static final long EXPECTED_OBJECT_SIZE = NUM_PARTS * PART_SIZE;
+
+  private static final DataRedundancy[] DATA_REDUNDANCY_VALUES = new DataRedundancy[] { DataRedundancy.SINGLE_AVAILABILITY_ZONE, null };
 
   private static final List<SdkAsyncHttpClient.Builder<?>> ASYNC_HTTP_CLIENT_BUILDER_LIST = List.of(
       NettyNioAsyncHttpClient.builder(),
@@ -90,12 +99,43 @@ abstract class AbstractS3Test {
     return result;
   }
 
+  private Stream<Arguments> validateS3AsyncClientArguments() {
+    List<Arguments> argumentsList = new ArrayList<>();
+    for (DataRedundancy dataRedundancy : DATA_REDUNDANCY_VALUES) {
+      for (S3AsyncClientInfo s3AsyncClient : s3AsyncClients()) {
+        argumentsList.add(Arguments.of(s3AsyncClient, dataRedundancy));
+      }
+    }
+    return argumentsList.stream();
+  }
+
+  private Stream<Arguments> validateS3ClientArguments() {
+    List<Arguments> argumentsList = new ArrayList<>();
+    for (DataRedundancy dataRedundancy : DATA_REDUNDANCY_VALUES) {
+      for (S3ClientInfo s3Client : s3Clients()) {
+        argumentsList.add(Arguments.of(s3Client, dataRedundancy));
+      }
+    }
+    return argumentsList.stream();
+  }
+
   @ParameterizedTest
-  @MethodSource("s3AsyncClients")
-  public void validateS3AsyncClient(S3AsyncClientInfo s3ClientInfo) throws Exception {
+  @MethodSource("validateS3AsyncClientArguments")
+  public void validateS3AsyncClient(S3AsyncClientInfo s3ClientInfo, DataRedundancy dataRedundancy) throws Exception {
     final S3AsyncClient s3Client = s3ClientInfo.client;
     final String bucket = "bucket-" + UUID.randomUUID();
-    CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(bucket).build();
+
+    CreateBucketRequest.Builder createBucketRequestBuilder = CreateBucketRequest.builder().bucket(bucket);
+    if (dataRedundancy != null) {
+      BucketInfo bucketInfo = BucketInfo.builder()
+          .dataRedundancy(dataRedundancy)
+          .type(BucketType.DIRECTORY)
+          .build();
+      CreateBucketConfiguration createBucketConfiguration = CreateBucketConfiguration.builder().bucket(bucketInfo).build();
+      createBucketRequestBuilder = createBucketRequestBuilder.createBucketConfiguration(createBucketConfiguration);
+    }
+
+    CreateBucketRequest createBucketRequest = createBucketRequestBuilder.build();
     CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest).get();
     assertSuccess(createBucketResponse);
 
@@ -134,7 +174,7 @@ abstract class AbstractS3Test {
     GetObjectResponse getObjectResponse = s3Client.getObject(getObjectRequest, localFile.toPath()).get();
     assertSuccess(getObjectResponse);
     assertThat(localFile).exists();
-    assertThat(localFile).hasSize(18000000L);
+    assertThat(localFile).hasSize(EXPECTED_OBJECT_SIZE);
 
     ListObjectsV2Request listObjectsV2Request = ListObjectsV2Request.builder().bucket(bucket).build();
     ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(listObjectsV2Request).get();
@@ -147,11 +187,22 @@ abstract class AbstractS3Test {
   }
 
   @ParameterizedTest
-  @MethodSource("s3Clients")
-  public void validateS3Client(S3ClientInfo s3ClientInfo) throws Exception {
+  @MethodSource("validateS3ClientArguments")
+  public void validateS3Client(S3ClientInfo s3ClientInfo, DataRedundancy dataRedundancy) throws Exception {
     final S3Client s3Client = s3ClientInfo.client;
     final String bucket = "bucket-" + UUID.randomUUID();
-    CreateBucketRequest createBucketRequest = CreateBucketRequest.builder().bucket(bucket).build();
+
+    CreateBucketRequest.Builder createBucketRequestBuilder = CreateBucketRequest.builder().bucket(bucket);
+    if (dataRedundancy != null) {
+      BucketInfo bucketInfo = BucketInfo.builder()
+          .dataRedundancy(dataRedundancy)
+          .type(BucketType.DIRECTORY)
+          .build();
+      CreateBucketConfiguration createBucketConfiguration = CreateBucketConfiguration.builder().bucket(bucketInfo).build();
+      createBucketRequestBuilder = createBucketRequestBuilder.createBucketConfiguration(createBucketConfiguration);
+    }
+
+    CreateBucketRequest createBucketRequest = createBucketRequestBuilder.build();
     CreateBucketResponse createBucketResponse = s3Client.createBucket(createBucketRequest);
     assertSuccess(createBucketResponse);
 
@@ -190,7 +241,7 @@ abstract class AbstractS3Test {
     GetObjectResponse getObjectResponse = s3Client.getObject(getObjectRequest, localFile.toPath());
     assertSuccess(getObjectResponse);
     assertThat(localFile).exists();
-    assertThat(localFile).hasSize(18000000L);
+    assertThat(localFile).hasSize(EXPECTED_OBJECT_SIZE);
 
     ListObjectsV2Request listObjectsV2Request = ListObjectsV2Request.builder().bucket(bucket).build();
     ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(listObjectsV2Request);

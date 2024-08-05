@@ -3,6 +3,7 @@ package io.github.sullis.testcontainers.playground;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -166,10 +167,11 @@ public class LocalstackTest {
       kinesisClient.waiter().waitUntilStreamExists(builder -> {
         builder.streamName(streamName).build();
       }).get();
+      String partitionKey = "partition-key-" + ThreadLocalRandom.current().nextInt(0, 10);
       PutRecordResponse putRecordResponse = kinesisClient.putRecord(builder -> {
         builder.streamName(streamName)
             .data(SdkBytes.fromString(payload, StandardCharsets.UTF_8))
-            .partitionKey("foobar");
+            .partitionKey(partitionKey);
       }).get();
       assertSuccess(putRecordResponse);
     }

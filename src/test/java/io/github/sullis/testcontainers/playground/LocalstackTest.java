@@ -53,12 +53,12 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 
 public class LocalstackTest {
-  private static final List<SdkAsyncHttpClient.Builder<?>> ASYNC_HTTP_CLIENT_BUILDER_LIST = List.of(
-      NettyNioAsyncHttpClient.builder(),
-      AwsCrtAsyncHttpClient.builder());
 
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
-      .withServices(LocalStackContainer.Service.DYNAMODB, LocalStackContainer.Service.S3, LocalStackContainer.Service.KINESIS);
+      .withServices(
+          LocalStackContainer.Service.DYNAMODB,
+          LocalStackContainer.Service.S3,
+          LocalStackContainer.Service.KINESIS);
 
   private static final AwsCredentialsProvider AWS_CREDENTIALS_PROVIDER = StaticCredentialsProvider.create(
       AwsBasicCredentials.create(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())

@@ -195,10 +195,4 @@ public class LocalstackTest {
     assertThat(sdkResponse.sdkHttpResponse().isSuccessful()).isTrue();
   }
 
-  public record S3AsyncClientInfo(String description, S3AsyncClient client) {
-    @Override
-    public String toString() {
-      return this.description + ":" + this.client.getClass().getSimpleName();
-    }
-  }
 }

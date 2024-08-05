@@ -18,8 +18,11 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.SdkResponse;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 import software.amazon.awssdk.services.kinesis.model.CreateStreamResponse;
@@ -47,6 +50,9 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbAsyncWaiter;
+import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -177,12 +183,34 @@ public class LocalstackTest {
     }
   }
 
+  @ParameterizedTest
+  @MethodSource("awsSdkAsyncHttpClients")
+  public void s3(final String sdkHttpClientName, final SdkAsyncHttpClient sdkHttpClient) throws Throwable {
+    final String bucketName = "test-bucket-" + UUID.randomUUID().toString();
+    final String key = "test-key-" + UUID.randomUUID().toString();
+    final String payload = "test-payload-" + UUID.randomUUID().toString();
+    try (S3AsyncClient s3Client = createS3Client(sdkHttpClient)) {
+      CreateBucketResponse createBucketResponse = s3Client.createBucket(request -> request.bucket(bucketName)).get();
+      assertSuccess(createBucketResponse);
+      PutObjectResponse putObjectResponse = s3Client.putObject(request -> request.bucket(bucketName).key(key),
+          AsyncRequestBody.fromString(payload)).get();
+      assertSuccess(putObjectResponse);
+      try (ResponseInputStream<GetObjectResponse> responseInputStream = s3Client.getObject(request -> request.bucket(bucketName).key(key), AsyncResponseTransformer.toBlockingInputStream()).get()) {
+        assertThat(responseInputStream).hasContent(payload);
+      }
+    }
+  }
+
   private DynamoDbAsyncClient createDynamoDbClient(final SdkAsyncHttpClient sdkHttpClient) {
     return (DynamoDbAsyncClient) configure(DynamoDbAsyncClient.builder().httpClient(sdkHttpClient)).build();
   }
 
   private KinesisAsyncClient createKinesisClient(final SdkAsyncHttpClient sdkHttpClient) {
     return (KinesisAsyncClient) configure(KinesisAsyncClient.builder().httpClient(sdkHttpClient)).build();
+  }
+
+  private S3AsyncClient createS3Client(final SdkAsyncHttpClient sdkHttpClient) {
+    return (S3AsyncClient) configure(S3AsyncClient.builder().httpClient(sdkHttpClient)).build();
   }
 
   private static AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {

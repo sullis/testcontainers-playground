@@ -24,6 +24,10 @@ import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.model.ListMetricsResponse;
+import software.amazon.awssdk.services.cloudwatch.model.Metric;
+import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataResponse;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 import software.amazon.awssdk.services.kinesis.model.CreateStreamResponse;
 import software.amazon.awssdk.services.kinesis.model.PutRecordResponse;
@@ -62,6 +66,7 @@ public class LocalstackTest {
 
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0"))
       .withServices(
+          LocalStackContainer.Service.CLOUDWATCH,
           LocalStackContainer.Service.DYNAMODB,
           LocalStackContainer.Service.S3,
           LocalStackContainer.Service.KINESIS);
@@ -201,6 +206,24 @@ public class LocalstackTest {
     }
   }
 
+  @ParameterizedTest
+  @MethodSource("awsSdkAsyncHttpClients")
+  public void cloudwatch(final String sdkHttpClientName, final SdkAsyncHttpClient sdkHttpClient) throws Throwable {
+    final String metricName = "test-metric-name-" + UUID.randomUUID().toString();
+    try (CloudWatchAsyncClient cwClient = createCloudWatchClient(sdkHttpClient)) {
+        final Double count = 5.0;
+        PutMetricDataResponse response = cwClient.putMetricData(
+            request -> request.metricData(builder -> builder.metricName(metricName)
+                .counts(count))).get();
+        assertSuccess(response);
+        ListMetricsResponse listResponse = cwClient.listMetrics(request -> request.metricName(metricName)).get();
+        assertSuccess(listResponse);
+        assertThat(listResponse.metrics()).hasSize(1);
+        Metric metric = listResponse.metrics().get(0);
+        assertThat(metric.metricName()).isEqualTo(metricName);
+    }
+  }
+
   private DynamoDbAsyncClient createDynamoDbClient(final SdkAsyncHttpClient sdkHttpClient) {
     return (DynamoDbAsyncClient) configure(DynamoDbAsyncClient.builder().httpClient(sdkHttpClient)).build();
   }
@@ -211,6 +234,10 @@ public class LocalstackTest {
 
   private S3AsyncClient createS3Client(final SdkAsyncHttpClient sdkHttpClient) {
     return (S3AsyncClient) configure(S3AsyncClient.builder().httpClient(sdkHttpClient)).build();
+  }
+
+  private CloudWatchAsyncClient createCloudWatchClient(final SdkAsyncHttpClient sdkHttpClient) {
+    return (CloudWatchAsyncClient) configure(CloudWatchAsyncClient.builder().httpClient(sdkHttpClient)).build();
   }
 
   private static AwsClientBuilder<?, ?> configure(AwsClientBuilder<?, ?> builder) {

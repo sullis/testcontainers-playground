@@ -64,7 +64,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class LocalstackTest {
 
-  private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.8.1"))
+  private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:latest"))
       .withServices(
           LocalStackContainer.Service.CLOUDWATCH,
           LocalStackContainer.Service.DYNAMODB,

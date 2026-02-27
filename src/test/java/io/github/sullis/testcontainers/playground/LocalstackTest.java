@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.localstack.LocalStackContainer;
 import org.testcontainers.shaded.org.awaitility.Awaitility;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -29,6 +29,8 @@ import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 import software.amazon.awssdk.services.cloudwatch.model.ListMetricsResponse;
 import software.amazon.awssdk.services.cloudwatch.model.Metric;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
 import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataResponse;
 import software.amazon.awssdk.services.cloudwatch.model.StandardUnit;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
@@ -69,10 +71,10 @@ public class LocalstackTest {
 
   private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:4.4.0"))
       .withServices(
-          LocalStackContainer.Service.CLOUDWATCH,
-          LocalStackContainer.Service.DYNAMODB,
-          LocalStackContainer.Service.S3,
-          LocalStackContainer.Service.KINESIS);
+          "cloudwatch",
+          "dynamodb",
+          "s3",
+          "kinesis");
 
   private static final AwsCredentialsProvider AWS_CREDENTIALS_PROVIDER = StaticCredentialsProvider.create(
       AwsBasicCredentials.create(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
@@ -216,9 +218,14 @@ public class LocalstackTest {
     try (CloudWatchAsyncClient cwClient = createCloudWatchClient(sdkHttpClient)) {
         final Double count = 5.0;
         PutMetricDataResponse response = cwClient.putMetricData(
-            request -> request.metricData(builder -> builder.metricName(metricName)
-                .unit(StandardUnit.COUNT)
-                .counts(count))).get();
+            PutMetricDataRequest.builder()
+                .namespace("TestNamespace")
+                .metricData(MetricDatum.builder()
+                    .metricName(metricName)
+                    .unit(StandardUnit.COUNT)
+                    .value(count)
+                    .build())
+                .build()).get();
         assertSuccess(response);
         Awaitility.await()
             .pollInterval(Duration.ofMillis(100))

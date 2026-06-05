@@ -27,7 +27,7 @@
     <maven.surefire.version>3.5.5</maven.surefire.version>
     <testcontainers.version>2.0.5</testcontainers.version>
     <junit.version>6.1.0</junit.version>
-    <aws.sdk.version>2.46.3</aws.sdk.version>
+    <aws.sdk.version>2.46.4</aws.sdk.version>
     <assertj.version>4.0.0-M1</assertj.version>
     <commons-lang3.version>3.20.0</commons-lang3.version>
     <logback.version>1.5.33</logback.version>

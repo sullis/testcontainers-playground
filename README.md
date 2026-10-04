@@ -51,3 +51,10 @@ Dependency updates are automated with Dependabot, and CI builds on every push an
 ## License
 
 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+
+## Other projects
+
+- https://github.com/redis-field-engineering/testcontainers-redis
+- https://github.com/sullis/redis-playground
+- https://github.com/sullis/valkey-playground
+

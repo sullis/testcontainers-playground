@@ -1,17 +1,19 @@
 # testcontainers-playground
 
-A Java playground for experimenting with [Testcontainers](https://java.testcontainers.org) and AWS services via [LocalStack](https://localstack.cloud).
+A Java playground for experimenting with [Testcontainers](https://java.testcontainers.org) and local AWS service emulators.
 
 ## What's inside
 
-A single test class, [`LocalstackTest`](src/test/java/io/github/sullis/testcontainers/playground/LocalstackTest.java), starts one `LocalStackContainer` (`localstack/localstack:4.4.0`) for the whole class and exercises the AWS SDK v2 **async** clients against it:
+Each test class starts one container for the whole class and exercises the AWS SDK v2 **async** clients against it:
 
-| Service | What the test does |
-|---|---|
-| DynamoDB | create table, wait until it exists, put item, get item (consistent read), delete table |
-| S3 | create bucket, put object, get object as a blocking input stream |
-| Kinesis | create stream, wait until it exists, put record |
-| CloudWatch | put metric data, list metrics — currently `@Disabled` |
+| Test class | Container | Service | What the test does |
+|---|---|---|---|
+| [`DynamoDbLocalTest`](src/test/java/io/github/sullis/testcontainers/playground/DynamoDbLocalTest.java) | `amazon/dynamodb-local:3.3.1` | DynamoDB | create table, wait until it exists, put item, get item (consistent read), delete table |
+| [`S3MockTest`](src/test/java/io/github/sullis/testcontainers/playground/S3MockTest.java) | `adobe/s3mock:5.2.3` | S3 | create bucket, put object, get object as a blocking input stream |
+| [`LocalstackTest`](src/test/java/io/github/sullis/testcontainers/playground/LocalstackTest.java) | `localstack/localstack:4.4.0` | Kinesis | create stream, wait until it exists, put record |
+| [`LocalstackTest`](src/test/java/io/github/sullis/testcontainers/playground/LocalstackTest.java) | `localstack/localstack:4.4.0` | CloudWatch | put metric data, list metrics — currently `@Disabled` |
+
+LocalStack is pinned to `4.4.0`, a release from before March 2026 that runs without an auth token. Releases since `2026.3.0` require a LocalStack account and token.
 
 Every test is a JUnit 5 parameterized test that runs twice, once per async HTTP client:
 
